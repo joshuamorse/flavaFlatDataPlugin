@@ -1,0 +1,3 @@
+Terminology
+-----------
+Repository -> Records -> Properties

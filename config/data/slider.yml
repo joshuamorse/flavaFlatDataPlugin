@@ -1,0 +1,5 @@
+kimber_test:
+  images:
+    img1: { path: 'feature.jpg', type: 'static' }
+    img2: { path: 'feature1.jpg', type: 'static' }
+    img3: { path: 'feature2.jpg', type: 'static' }

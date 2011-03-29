@@ -1,0 +1,18 @@
+kimber_test:
+  featured: true
+  image_path: 'homepage_images/Kimber/'
+  slider: 'kimber_test'
+  slug: 'kimber-test'
+  title: 'Kimber'
+  url: 'http://www.kimberamerica.com/'
+  work_items:
+    repository: 'work_item'
+    values: [work_item_a, work_item_b]
+
+another_test:
+  featured: false
+  image_path: 'homepage_images/Kimber/'
+  slider: 'another_test'
+  slug: 'kimber-test'
+  title: 'Kimber'
+  url: 'http://www.kimberamerica.com/'
