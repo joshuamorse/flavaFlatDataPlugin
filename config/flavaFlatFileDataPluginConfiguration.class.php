@@ -26,10 +26,10 @@ class flavaFlatFileDataPluginConfiguration extends sfPluginConfiguration
   }
 
   /**
-   * getYamlModelService 
+   * Returns the flatFileDataService.
    * 
    * @access public
-   * @return object flavaYamlModelService
+   * @return object $flavaFlatFileDataService
    */
   public function getFlatFileDataService()
   {
@@ -41,8 +41,6 @@ class flavaFlatFileDataPluginConfiguration extends sfPluginConfiguration
       );
 
       $this->parseService = new $class();
-      //$this->parseService = null;
-
       $this->instance = new flavaFlatFileDataService($this->repositoryPath, $this->parseService);
     }
 

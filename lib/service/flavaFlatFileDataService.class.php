@@ -1,9 +1,14 @@
 <?php
 
 /**
- * flavaFlatFileDataService 
+ * flavaFlatFileDataService
  * 
- * @package 
+ * Accepts an optional parsing service as an argument to the constructor. 
+ * The purpose of this is allow for the parsing of formats outside of PHP.
+ * Included in flavaFlatFileDataParseService.class.php is YAML functionality.
+ * If no parse service is injected, the service will fallback to PHP arrays.
+ *
+ * @package flavaFlatFileDataPlugin
  * @version $id$
  * @author Joshua Morse <joshua.morse@iostudio.com> 
  */
@@ -13,11 +18,11 @@ class flavaFlatFileDataService
     $filter, // filter definition for filtering repository records.
     $filteredRelatedRepositoryRecords, // related repository with filtered records defined by current property.
     $filteredRepositoryRecords, // current repository with filtered records.
-    $parseService,
+    $parseService, // placeholder for an optionally-supplied parse service.
     $property, // current property.
     $record, // current record.
     $relatedRepository, // full related repository on which to filter.
-    $repository, // current repository.
+    $repositoryRecords, // current repository records.
     $repositoryExtension, // repository extension as 'php', or as defined by optional parse service.
     $repositoryName // current repository name.
   ;
@@ -34,7 +39,8 @@ class flavaFlatFileDataService
   /**
    * __construct 
    * 
-   * @param mixed $modelPath 
+   * @param mixed $repositoryPath 
+   * @param flavaFlatFileDataParseInterface $parseService 
    * @access public
    * @return void
    */
@@ -56,43 +62,28 @@ class flavaFlatFileDataService
   }
 
   /**
-   * getInstance 
-   * 
-   * @static
-   * @access public
-   * @return void
-   */
-  public static function getInstance()
-  {
-    if (self::$instance === null)
-    {
-      self::$instance = new ioYamlModelService();
-    }
-
-    return self::$instance;
-  }
-
-  /**
-   * getRepository 
+   * Fetches a repository's records.
    * 
    * @param mixed $repository 
    * @access public
-   * @return void
+   * @return object $flavaFlatFileDataService
    */
   public function getRepository($repository)
   {
-    $this->repository = $this->loadRepository($repository);
+    $this->repositoryRecords = $this->loadRepository($repository);
     $this->repositoryName = $repository;
 
     return $this;
   }
 
   /**
-   * loadRepository 
+   * Attempts to load a repository.
+   * If a parse service was supplied upon instantiation, it is used. 
+   * Otherwise, will fall back to PHP arrays defined under the $data var.
    * 
    * @param mixed $repository 
    * @access public
-   * @return void
+   * @return array
    */
   public function loadRepository($repository)
   {
@@ -114,16 +105,17 @@ class flavaFlatFileDataService
    * 
    * @param mixed $record 
    * @access public
-   * @return void
+   * @return object $flavaFlatFileDataService
    */
   public function getRecord($record)
   {
-    if (!array_key_exists($record, $this->repository))
+    if (!array_key_exists($record, $this->repositoryRecords))
     {
       throw new exception('Cannot find ' . $record . ' in the following repository: ' . $this->repositoryName . '.');
     }
-
-    $this->record = $this->repository[$record];
+    
+    // Set the current record to the found repository record.
+    $this->record = $this->repositoryRecords[$record];
 
     return $this;
   }
@@ -134,7 +126,7 @@ class flavaFlatFileDataService
    * @param mixed $property 
    * @static
    * @access public
-   * @return void
+   * @return object $flavaFlatFileDataService
    */
   public function getProperty($property)
   {
@@ -173,6 +165,7 @@ class flavaFlatFileDataService
         }
       }
 
+      // Set the current property to the filtered repository records we've found.
       $this->property = $this->filteredRelatedRepositoryRecords;
     }
 
@@ -187,7 +180,7 @@ class flavaFlatFileDataService
    * @param mixed $rightValue 
    * @static
    * @access public
-   * @return void
+   * @return object $flavaFlatFileDataService
    */
   public function filter($leftValue, $operator, $rightValue)
   {
@@ -196,45 +189,52 @@ class flavaFlatFileDataService
       throw new exception('Cannot filter a repository from which a record is already fetched!');
     }
 
-    $this->filteredRepositoryRecords = $this->repository;
+    // Init the filteredRelatedRepositoryRecords var with the current repository records.
+    $this->filteredRepositoryRecords = $this->repositoryRecords;
 
-    foreach ($this->filteredRepositoryRecords as $id => $record)
+    foreach ($this->filteredRepositoryRecords as $filteredRepositoryRecordId => $filteredRepositoryRecord)
     {
       $this->setFilter(array(
-        'leftValue' => $record[$leftValue],
+        'leftValue' => $filteredRepositoryRecord[$leftValue],
         'operator' => $operator,
         'rightValue' => $rightValue,
       ));
 
-      $this->filteredRepositoryRecords = $this->runFilter($this->filter, $this->filteredRepositoryRecords, $id);
+      // Run the filter on the record/repository and update the filteredRepositoryRecords var.
+      $this->filteredRepositoryRecords = $this->runFilter(
+        $this->filter,
+        $this->filteredRepositoryRecords,
+        $filteredRepositoryRecordId
+      );
     }
 
     return $this;
   }
 
   /**
-   * runFilter 
+   * Checks to see if a supplied filter is valid.
+   * Unsets the record in question from the supplied repository, if applicable.
    * 
    * @param array $filter 
    * @param array $repository 
    * @param mixed $id 
    * @access protected
-   * @return array $repository
+   * @return array $repositoryRecords
    */
-  protected function runFilter(array $filter, array $repository, $id)
+  protected function runFilter(array $filter, array $repositoryRecords, $recordId)
   {
     // Does the record pass the filter?
     if (!$this->passesFilter($filter))
     {
       // The current record doesn't pass the filter. We'll unset it from our results.
-      unset($repository[$id]);
+      unset($repositoryRecords[$recordId]);
     }
 
-    return $repository;
+    return $repositoryRecords;
   }
 
   /**
-   * setFilter 
+   * Sets a filter.
    * 
    * @param array $filterOptions 
    * @access public
@@ -246,7 +246,7 @@ class flavaFlatFileDataService
   }
 
   /**
-   * passesFilter 
+   * Determines whether or not a passed filter is valid.
    * 
    * @param mixed $leftValue 
    * @param mixed $operator 
@@ -303,7 +303,7 @@ class flavaFlatFileDataService
    * 
    * @static
    * @access public
-   * @return void
+   * @return array
    */
   public function execute()
   {
@@ -322,18 +322,18 @@ class flavaFlatFileDataService
       return $this->filteredRepositoryRecords;
     }
 
-    if ($this->repository)
+    if ($this->repositoryRecords)
     {
-      return $this->repository;
+      return $this->repositoryRecords;
     }
   }
 
   /**
-   * setModelPath 
+   * Verifies and sets a repository path.
    * 
    * @param mixed $path 
    * @access public
-   * @return void
+   * @return object flavaFlatFileDataService
    */
   public function setRepositoryPath($path)
   {
@@ -348,7 +348,7 @@ class flavaFlatFileDataService
   }
 
   /**
-   * initFilter 
+   * Initializes a filter.
    * 
    * @access protected
    * @return void
