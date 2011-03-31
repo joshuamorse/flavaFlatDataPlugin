@@ -1,6 +1,6 @@
 <?php
 
-$data = array(
+return array(
   'kimber_test' => array(
     'is_php' => true,
     'featured' => true,

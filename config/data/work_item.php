@@ -1,12 +1,12 @@
 <?php
 
-$data = array(
+return array(
   'work_item_a' => array(
     'is_php' => true,
     'name' => 'work item related to kimber_test!',
     'project' => array(
       'repository' => 'project',
-      'value' => 'kimber_test',
+      'values' => array('kimber_test'),
     ),
   ),
 
@@ -14,7 +14,7 @@ $data = array(
     'name' => 'work item related to another_test!',
     'project' => array(
       'repository' => 'project',
-      'value' => 'another_test',
+      'values' => array('another_test'),
     ),
   ),
 

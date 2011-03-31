@@ -1,3 +1,5 @@
 all:
-  flava_flat_file_data_plugin:
-    parse_service_class: 'flavaFlatFileDataParseService' 
+  flava_flat_data_plugin:
+    loader:
+      php: 'flavaFlatPhpDataLoader'
+      yaml: 'flavaFlatYamlDataLoader' 
