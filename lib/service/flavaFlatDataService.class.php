@@ -21,6 +21,7 @@ class flavaFlatDataService
     $parseService, // placeholder for an optionally-supplied parse service.
     $property, // current property.
     $record, // current record.
+    $recordName, // current record name.
     $relatedRepository, // full related repository on which to filter.
     $repositoryRecords, // current repository records.
     $repositoryExtension, // repository extension as 'php', or as defined by optional parse service.
@@ -111,6 +112,7 @@ class flavaFlatDataService
     
     // Set the current record to the found repository record.
     $this->record = $this->repositoryRecords[$record];
+    $this->recordName = $record;
 
     return $this;
   }
@@ -133,6 +135,14 @@ class flavaFlatDataService
     if ($this->property === null)
     {
       // If this is our first time setting a property, we'll use the record's value.
+      if (!array_key_exists($property, $this->record))
+      {
+        throw new Exception(sprintf('Property named "%s" was not found in record named "%s"!',
+          $property,
+          $this->recordName
+        ));
+      }
+
       $this->property = $this->record[$property];
     }
     else
