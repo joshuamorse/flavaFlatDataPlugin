@@ -38,10 +38,10 @@ class flavaFlatDataPluginConfiguration extends sfPluginConfiguration
 
       $class = 'flavaFlatPhpDataLoader';
 
-      $repositoryPath = dirname(__FILE__) . '/data/';
+      $repositoriesPath = dirname(__FILE__) . '/data/';
 
       $parseService = new $class();
-      $this->instance = new flavaFlatDataService($repositoryPath, $parseService);
+      $this->instance = new flavaFlatDataService($repositoriesPath, $parseService);
     }
 
     return $this->instance;

@@ -14,14 +14,14 @@ class flavaFlatPhpDataLoader implements flavaFlatDataLoaderInterface
 
   public function loadRepository($repository)
   {
-    $repository = require_once($repository);
+    require($repository);
 
-    if (!is_array($repository))
+    if (!is_array($data))
     {
       throw new Exception('PHP repositories need be defined in array format!');
     }
 
-    return $repository;
+    return $data;
   }
 
   public function getRepositoryExtension()

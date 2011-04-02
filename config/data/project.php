@@ -1,6 +1,6 @@
 <?php
 
-return array(
+$data = array(
   'kimber_test' => array(
     'is_php' => true,
     'featured' => true,
@@ -11,9 +11,18 @@ return array(
     'url' => 'http://www.kimberamerica.com/',
     'work_items' => array(
       'repository' => 'work_item',
+      'foreign_alias' => 'project',
       'values' => array(
         'work_item_a',
         'work_item_b'
+      ),
+    ),
+    'users' => array(
+      'repository' => 'user',
+      'foreignAlias' => 'project',
+      'values' => array(
+        'user1',
+        'user2',
       ),
     ),
   ),
