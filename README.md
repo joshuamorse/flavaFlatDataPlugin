@@ -88,14 +88,14 @@ A little bit of extra data is required to set up a relation from one repository 
 Let's define a user repository:
 
 
-  user1:
-    name: 'Jumping Jack'
+    user1:
+      name: 'Jumping Jack'
 
-  user2:
-    name: 'Sal Amander'
+    user2:
+      name: 'Sal Amander'
 
-  user3:
-    name: 'Mr. Anon'
+    user3:
+      name: 'Mr. Anon'
 
 
 Say we want to set up a relation in our project records to relate to users that belong to those 
