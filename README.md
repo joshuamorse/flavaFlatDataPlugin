@@ -102,7 +102,7 @@ Say we want to set up a relation in our project records to relate to users that 
 projects; a one-to-many relationship. We'll assume we've named our user repository user.yml:
 
 
-   project1:
+    project1:
       name: 'Totally Awesome Project'
       about: 'Everything about this project.'
       is_featured: false
@@ -190,7 +190,7 @@ it were a regular property:
 
     $this->userProject = $this->getFlatDataService()
       ->getRepository('work_item')
-      ->getRecord('work_item_a')
+      ->getRecord('user1')
       ->getProperty('project')
       ->execute()
     ;
