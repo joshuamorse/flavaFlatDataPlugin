@@ -9,22 +9,21 @@ $data = array(
     'slug' => 'kimber-test',
     'title' => 'Kimber',
     'url' => 'http://www.kimberamerica.com/',
-    'work_items' => array(
+    'work_item' => array(
       'repository' => 'work_item',
       'foreign_alias' => 'project',
       'values' => array(
         'work_item_a',
-        'work_item_b'
       ),
     ),
-    'users' => array(
-      'repository' => 'user',
-      'foreignAlias' => 'project',
-      'values' => array(
-        'user1',
-        'user2',
-      ),
-    ),
+    //'users' => array(
+      //'repository' => 'user',
+      //'foreignAlias' => 'project',
+      //'values' => array(
+        //'user1',
+        //'user2',
+      //),
+    //),
   ),
 
   'another_test' => array(

@@ -36,12 +36,14 @@ class flavaFlatDataPluginConfiguration extends sfPluginConfiguration
         'flavaFlatYamlDataLoader'
       );
 
-      $class = 'flavaFlatPhpDataLoader';
+      $class = 'flavaFlatPhpDataLoader'; // temp
 
+      $hydrateForeignRelations = true;
+      $hydrateLocalRelations = true;
       $repositoriesPath = dirname(__FILE__) . '/data/';
 
       $parseService = new $class();
-      $this->instance = new flavaFlatDataService($repositoriesPath, $parseService);
+      $this->instance = new flavaFlatDataService($repositoriesPath, $parseService, $hydrateLocalRelations, $hydrateForeignRelations);
     }
 
     return $this->instance;

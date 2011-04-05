@@ -14,6 +14,11 @@ class flavaFlatPhpDataLoader implements flavaFlatDataLoaderInterface
 
   public function loadRepository($repository)
   {
+    if (!file_exists($repository))
+    {
+      throw new Exception(sprintf('Repository "%s" cannot be found!', $repository));
+    }
+
     require($repository);
 
     if (!is_array($data))

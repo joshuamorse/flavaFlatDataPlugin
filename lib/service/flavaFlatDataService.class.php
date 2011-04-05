@@ -18,6 +18,8 @@ class flavaFlatDataService
     $filter, // filter definition for filtering repository records.
     $filteredRelatedRepositoryRecords, // related repository with filtered records defined by current property.
     $filteredRepositoryRecords, // current repository with filtered records.
+    $hydrateLocalRelations,
+    $hydrateForeignRelations,
     $parseService, // placeholder for an optionally-supplied parse service.
     $property, // current property.
     $record, // current record.
@@ -46,7 +48,7 @@ class flavaFlatDataService
    * @access public
    * @return void
    */
-  public function __construct($repositoriesPath, flavaFlatDataLoaderInterface $parseService)
+  public function __construct($repositoriesPath, flavaFlatDataLoaderInterface $parseService, $hydrateLocalRelations = true, $hydrateForeignRelations = true)
   {
     $this->filter = array(
       'leftValue' => null,
@@ -66,10 +68,12 @@ class flavaFlatDataService
     }
 
     $this->setRepositoriesPath($repositoriesPath);
+    $this->hydrateLocalRelations = $hydrateLocalRelations;
+    $this->hydrateForeignRelations = $hydrateForeignRelations;
   }
 
   /**
-   * Fetches a repository's records.
+   * Fetches a repository's records, set its name and hyrdates, if necessary.
    * 
    * @param mixed $repository 
    * @access public
@@ -77,10 +81,143 @@ class flavaFlatDataService
    */
   public function getRepository($repository)
   {
-    $this->repositoryRecords = $this->loadRepository($repository);
     $this->repositoryName = $repository;
+    $this->repositoryRecords = $this->loadRepository($repository);
+
+    if ($this->hydrateLocalRelations)
+    {
+      $this->hydrateLocalRelations();    
+    }
+
+    if ($this->hydrateForeignRelations)
+    {
+      $this->hydrateForeignRelations();
+    }
 
     return $this;
+  }
+
+  /**
+   * Hydrates relational data for a supplied data repository.
+   * Currently does include searching for foreign alias/data definitions. 
+   * 
+   * @param array $repositoryRecords 
+   * @access public
+   * @return array $repositoryRecords
+   */
+  public function hydrateLocalRelations()
+  {
+    /**
+     * Search through the repository records in an attempt to find relation definition.
+     * We'll only iterate through the repository records if a relation is set somewhere within.
+     */
+    if ($this->hasLocalRelationDefinition($this->repositoryRecords))
+    {
+      foreach ($this->repositoryRecords as $repositoryRecord => $repositoryRecordProperties)
+      {
+        foreach ($repositoryRecordProperties as $repositoryRecordProperty => $repositoryRecordPropertyValue)
+        {
+          // Only dig deeper if we find a relation definition.
+          if ($this->hasLocalRelationDefinition($repositoryRecordPropertyValue))
+          {
+            /**
+             * We've found a relation defintion, if we've made it this far.  
+             * Let's gather the data we'll need and load the target repository.
+             */
+            $targetRepositoryName = $repositoryRecordPropertyValue['repository'];
+            $targetRepositoryRecords = $this->loadRepository($targetRepositoryName);
+            $targetValues = $repositoryRecordPropertyValue['values'];
+
+            /**
+             * Clear out the relational data definition.
+             * We already have the data we need and will be replacing this with actual related data.
+             */
+            $this->repositoryRecords[$repositoryRecord][$repositoryRecordProperty] = array();
+
+            // Find the related records we'll need.
+            foreach ($targetRepositoryRecords as $targetRepositoryRecord => $targetRepositoryRecordProperties)
+            {
+              // Is the current repository record one our target values?
+              if (in_array($targetRepositoryRecord, $targetValues))
+              {
+                $this->repositoryRecords[$repositoryRecord][$repositoryRecordProperty][$targetRepositoryRecord] = $targetRepositoryRecordProperties;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Hydrates relations based on set foreign_alias parameters.
+   * 
+   * @access public
+   * @return void
+   */
+  public function hydrateForeignRelations()
+  {
+    foreach ($this->getRepositoryNames() as $repositoryName)
+    {
+      $targetRepositoryRecords = $this->loadRepository($repositoryName);
+
+      if ($this->hasLocalRelationDefinition($targetRepositoryRecords))
+      {
+        foreach ($targetRepositoryRecords as $targetRepositoryRecordId => $targetRepositoryRecord)
+        {
+          foreach ($targetRepositoryRecord as $repositoryRecordProperty => $repositoryRecordPropertyValue)
+          {
+            if ($this->hasLocalRelationDefinition($repositoryRecordPropertyValue))
+            {
+              if ($repositoryRecordPropertyValue['repository'] = $this->repositoryName)
+              {
+                //var_dump($repositoryRecordPropertyValue['values']); die;
+
+                foreach ($this->repositoryRecords as $repositoryRecordId => $repositoryRecord)
+                {
+                  if (in_array($repositoryRecordId, $repositoryRecordPropertyValue['values']))
+                  {
+                    // current repo record exists in foreign relation values
+                    // take foreign related repo and add it to current repo record as related property
+
+                    // @todo get rid of - this repository name - from the below array (relational data).
+                    $this->repositoryRecords[$repositoryRecordId][$repositoryRecordPropertyValue['foreign_alias']][$targetRepositoryRecordId] = $targetRepositoryRecord;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    //var_dump($this->repositoryRecords); die;
+  }
+
+  /**
+   * getRepositoryNames 
+   * 
+   * @access public
+   * @return void
+   */
+  public function getRepositoryNames()
+  {
+    $handle = opendir($this->repositoriesPath);
+
+    while (false !== ($file = readdir($handle)))
+    {
+      // Make sure we're only grabbing files that have the extension defined by our loader service.
+      $pattern = '/.*\.' . $this->parseService->getRepositoryExtension() . '/';
+
+      if (($file !== '.' && $file !== '..') && preg_match($pattern, $file))
+      {
+        // We only need the repository name from here on out. We'll kill the extension here.
+        $targetRepositoryName = str_replace('.' . $this->parseService->getRepositoryExtension(), '', $file);
+        $repositoryNames[] = $targetRepositoryName;
+      }
+    }
+
+    return $repositoryNames;
   }
 
   /**
@@ -94,7 +231,12 @@ class flavaFlatDataService
    */
   public function loadRepository($repository)
   {
-    return $this->parseService->loadRepository($this->repositoriesPath . $repository . '.' . $this->repositoryExtension);
+    return $this->parseService->loadRepository(
+      sprintf('%s%s.%s',
+        $this->repositoriesPath,
+        $repository,
+        $this->repositoryExtension
+    ));
   }
   
   /**
@@ -119,17 +261,29 @@ class flavaFlatDataService
   }
 
   /**
-   * hasRelationDefinition 
+   * hasForeignRelationDefinition 
    * 
    * @param mixed $repositoryRecords 
    * @access public
    * @return void
    */
-  public function hasRelationDefinition($repositoryRecords = null)
+  public function hasForeignRelationDefinition($repositoryRecords)
   {
-    if ($repositoryRecords === null)
+  }
+
+  /**
+   * Recursively searches a supplied repository for the
+   * existence of a relation definition.
+   * 
+   * @param array $repositoryRecords 
+   * @access public
+   * @return boolean
+   */
+  public function hasLocalRelationDefinition($repositoryRecords)
+  {
+    if (!is_array($repositoryRecords))
     {
-      $repositoryRecords = $this->repositoryRecords;
+      return false;
     }
 
     $needle = 'repository';
@@ -144,7 +298,7 @@ class flavaFlatDataService
     {
       if (is_array($record))
       {
-        $result = $this->hasRelationDefinition($record);
+        $result = $this->hasLocalRelationDefinition($record);
       }
 
       if ($result)
@@ -181,62 +335,7 @@ class flavaFlatDataService
       }
       else
       {
-        /**
-         * The requested record can't be found. This either means one of two things:
-         *   - It's an invalid record request.
-         *   - It's a relational record request and it's record value is defined as a foreign alias.
-         *
-         * Course of action: check all other repositories in $repositoriesPath for the requested (possible) foreignAlias.
-         */
         
-        $handle = opendir($this->repositoriesPath);
-
-        while (false !== ($file = readdir($handle)))
-        {
-          // Make sure we're only grabbing files that have the extension specified by our loader service.
-          $pattern = '/.*\.' . $this->parseService->getRepositoryExtension() . '/';
-
-          if (($file !== '.' && $file !== '..') && preg_match($pattern, $file))
-          {
-            // We only need the repository name from here on out. We'll kill the extension here.
-            $targetRepositoryName = str_replace('.' . $this->parseService->getRepositoryExtension(), '', $file);
-
-            // Let's start searching! Though, there's no need to search the repository we're already in...
-            if ($targetRepositoryName != $this->repositoryName)
-            {
-              $targetRepositoryRecords = $this->loadRepository($targetRepositoryName);
-              
-              // Check the repository to see if a relation definition exists.
-              if ($this->hasRelationDefinition($targetRepositoryRecords))
-              {
-                // Looks like this repository has defined relations. Let's dig a bit deeper.
-                foreach ($targetRepositoryRecords as $targetRepositoryRecord => $targetRepositoryProperties)
-                {
-                  // Let's take a look at each fo the record's properties and try to find a relation definition.
-                  foreach ($targetRepositoryProperties as $targetRepositoryProperty => $value) 
-                  {
-                    // If it's a definition, it's an array.
-                    if (is_array($value))
-                    {
-                      // Ensure the repository definition is identical to ours.
-                      if ($value['repository'] == $this->repositoryName && $value['foreign_alias'] == $property)
-                      {
-                        // Ensure that our record name exists in the relation definition.
-                        if (array_search($this->recordName, $value['values']) !== false)
-                        {
-                          // If we've made it here, we've found our record in the relation.
-                          // We'll see the property to the related record's properties.
-                          $this->property = $targetRepositoryProperties;
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-
         // If we didn't find a relation, we didn't find anything; looks like an invalid request!
         if ($this->property === null)
         {
@@ -405,7 +504,7 @@ class flavaFlatDataService
    * Returns data based on order of prescedence: 
    *   - property 
    *   - record 
-   *   - filtered respository
+   *   - filtered repository
    *   - repository 
    * 
    * @static
