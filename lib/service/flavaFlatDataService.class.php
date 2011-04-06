@@ -239,11 +239,6 @@ class flavaFlatDataService
     }
 
     return $repositoryRecords;
-=======
-    }
-
-    //var_dump($this->repositoryRecords); die;
->>>>>>> 6957a5ec2542c0c09645f7eaa37e68c2eb17aa16
   }
 
   /**
@@ -313,21 +308,10 @@ class flavaFlatDataService
   }
 
   /**
-   * hasForeignRelationDefinition 
-   * 
-   * @param mixed $repositoryRecords 
-   * @access public
-   * @return void
-   */
-  public function hasForeignRelationDefinition($repositoryRecords)
-  {
-  }
-
-  /**
    * Recursively searches a supplied repository for the
    * existence of a relation definition.
    * 
-   * @param array $repositoryRecords 
+   * @param mixed $repositoryRecords 
    * @access public
    * @return boolean
    */
