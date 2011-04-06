@@ -82,7 +82,6 @@ class flavaFlatDataService
   public function getRepository($repository)
   {
     $this->resetRepositoryAndRecord();
-
     $this->repositoryName = $repository;
     $this->repositoryRecords = $this->loadRepository($repository);
 
@@ -197,16 +196,12 @@ class flavaFlatDataService
             {
               if ($repositoryRecordPropertyValue['repository'] = $this->repositoryName)
               {
-                //var_dump($repositoryRecordPropertyValue['values']); die;
-
                 foreach ($repositoryRecords as $repositoryRecordId => $repositoryRecord)
                 {
                   if (in_array($repositoryRecordId, $repositoryRecordPropertyValue['values']))
                   {
                     // current repo record exists in foreign relation values
                     // take foreign related repo and add it to current repo record as related property
-
-                    // @todo get rid of - this repository name - from the below array (relational data).
                     $repositoryRecords[$repositoryRecordId][$repositoryRecordPropertyValue['foreign_alias']][$targetRepositoryRecordId] = $this->removeRelationDefinitions($targetRepositoryRecord);
                     //$repositoryRecords[$repositoryRecordId][$repositoryRecordPropertyValue['foreign_alias']][$targetRepositoryRecordId] = $targetRepositoryRecord;
                   }
@@ -244,6 +239,11 @@ class flavaFlatDataService
     }
 
     return $repositoryRecords;
+=======
+    }
+
+    //var_dump($this->repositoryRecords); die;
+>>>>>>> 6957a5ec2542c0c09645f7eaa37e68c2eb17aa16
   }
 
   /**
