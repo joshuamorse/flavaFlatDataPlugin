@@ -19,6 +19,8 @@ class flavaFlatDataPluginConfiguration extends sfPluginConfiguration
     // Notify the dispatcher that we're going to be listening when a method can't be found.
     // Tell the dispatcher to look in our action file and see if the method in question exists there.
     $this->dispatcher->connect('component.method_not_found', array($action, 'listenComponentMethodNotFound'));
+
+    $this->connectTests();
   }
 
   /**
@@ -36,12 +38,14 @@ class flavaFlatDataPluginConfiguration extends sfPluginConfiguration
         'flavaFlatYamlDataLoader'
       );
 
-      $class = 'flavaFlatPhpDataLoader';
+      $class = 'flavaFlatPhpDataLoader'; // temp
 
+      $hydrateForeignRelations = true;
+      $hydrateLocalRelations = true;
       $repositoriesPath = dirname(__FILE__) . '/data/';
 
       $parseService = new $class();
-      $this->instance = new flavaFlatDataService($repositoriesPath, $parseService);
+      $this->instance = new flavaFlatDataService($repositoriesPath, $parseService, $hydrateLocalRelations, $hydrateForeignRelations);
     }
 
     return $this->instance;

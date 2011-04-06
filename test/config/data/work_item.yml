@@ -1,0 +1,14 @@
+work_item_a:
+  name: 'work item related to kimber_test!'
+  project:
+    repository: 'project'
+    values: ['kimber_test']
+
+work_item_b:
+  name: 'work item related to another_test!'
+  project:
+    repository: 'project'
+    values: ['another_test']
+
+work_item_c:
+  name: 'work item related to nothing'

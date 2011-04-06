@@ -88,21 +88,21 @@ A little bit of extra data is required to set up a relation from one repository 
 Let's define a user repository:
 
 
-    user1:
-      name: 'Jumping Jack'
+  user1:
+    name: 'Jumping Jack'
 
-    user2:
-      name: 'Sal Amander'
+  user2:
+    name: 'Sal Amander'
 
-    user3:
-      name: 'Mr. Anon'
+  user3:
+    name: 'Mr. Anon'
 
 
 Say we want to set up a relation in our project records to relate to users that belong to those 
 projects; a one-to-many relationship. We'll assume we've named our user repository user.yml:
 
 
-    project1:
+   project1:
       name: 'Totally Awesome Project'
       about: 'Everything about this project.'
       is_featured: false
@@ -190,7 +190,7 @@ it were a regular property:
 
     $this->userProject = $this->getFlatDataService()
       ->getRepository('work_item')
-      ->getRecord('user1')
+      ->getRecord('work_item_a')
       ->getProperty('project')
       ->execute()
     ;
