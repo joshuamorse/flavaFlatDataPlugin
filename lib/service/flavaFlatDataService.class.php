@@ -5,7 +5,7 @@
  * 
  * Accepts an optional parsing service as an argument to the constructor. 
  * The purpose of this is allow for the parsing of formats outside of PHP.
- * Included in flavaFlatDataParseService.class.php is YAML functionality.
+ * Included in flavaFlatDataloaderService.class.php is YAML functionality.
  * If no parse service is injected, the service will fallback to PHP arrays.
  *
  * @package flavaFlatDataPlugin
@@ -15,12 +15,11 @@
 class flavaFlatDataService
 {
   protected
+    $cacheDriver, // placeholder for a cache driver,
     $filter, // filter definition for filtering repository records.
     $filteredRelatedRepositoryRecords, // related repository with filtered records defined by current property.
     $filteredRepositoryRecords, // current repository with filtered records.
-    $hydrateLocalRelations,
-    $hydrateForeignRelations,
-    $parseService, // placeholder for an optionally-supplied parse service.
+    $loader, // placeholder for an optionally-supplied parse service.
     $property, // current property.
     $record, // current record.
     $recordName, // current record name.
@@ -44,11 +43,11 @@ class flavaFlatDataService
    * __construct 
    * 
    * @param mixed $repositoryPath 
-   * @param flavaFlatDataParseInterface $parseService 
+   * @param flavaFlatDataParseInterface $loader 
    * @access public
    * @return void
    */
-  public function __construct($repositoriesPath, flavaFlatDataLoaderInterface $parseService, $hydrateLocalRelations = true, $hydrateForeignRelations = true)
+  public function __construct($repositoriesPath, flavaFlatDataLoaderInterface $loader, $cacheDriver = null)
   {
     $this->filter = array(
       'leftValue' => null,
@@ -56,11 +55,11 @@ class flavaFlatDataService
       'rightValue' => null,
     );
 
-    $this->parseService = $parseService;
+    $this->loader = $loader;
 
-    if ($this->parseService !== null)
+    if ($this->loader !== null)
     {
-      $this->repositoryExtension = $this->parseService->getRepositoryExtension();
+      $this->repositoryExtension = $this->loader->getRepositoryExtension();
     }
     else
     {
@@ -68,8 +67,8 @@ class flavaFlatDataService
     }
 
     $this->setRepositoriesPath($repositoriesPath);
-    $this->hydrateLocalRelations = $hydrateLocalRelations;
-    $this->hydrateForeignRelations = $hydrateForeignRelations;
+
+    $this->cacheDriver = $cacheDriver;
   }
 
   /**
@@ -79,23 +78,41 @@ class flavaFlatDataService
    * @access public
    * @return object $flavaFlatDataService
    */
-  public function getRepository($repository)
+  public function getRepository($repositoryName)
   {
     $this->resetRepositoryAndRecord();
     $this->repositoryName = $repository;
     $this->repositoryRecords = $this->loadRepository($repository);
 
-    if ($this->hydrateLocalRelations)
+    // Has a cache driver been specified?
+    if ($this->cacheDriver)
     {
-      $this->repositoryRecords = $this->hydrateLocalRelations($this->repositoryRecords);    
-    }
-
-    if ($this->hydrateForeignRelations)
-    {
-      $this->repositoryRecords = $this->hydrateForeignRelations($this->repositoryRecords);
+      // Can we find this repository's records in the cache?
+      if ($repositoryRecords = $this->cacheDriver->get($this->getRepositoryCacheKey($repositoryName)))
+      {
+        // We found it! Unserialize it and set it.
+        $this->repositoryRecords = unserialize($repositoryRecords);
+      }
+      else
+      {
+        // We couldn't find it. We'll fetch it and then cache it.
+        $this->fetchRepository($repositoryName);
+        $this->cacheDriver->set($this->getRepositoryCacheKey($repositoryName), serialize($this->repositoryRecords));
+      }
     }
 
     return $this;
+  }
+
+  protected function fetchRepository($repositoryName)
+  {
+    $this->resetRepositoryAndRecord();
+
+    $this->repositoryName = $repositoryName;
+    $this->repositoryRecords = $this->loadRepository($repositoryName);
+
+    $this->hydrateLocalRelations($this->repositoryRecords);    
+    $this->hydrateForeignRelations($this->repositoryRecords);
   }
 
   /**
@@ -122,7 +139,7 @@ class flavaFlatDataService
    * @access protected
    * @return array $repositoryRecords
    */
-  protected function hydrateLocalRelations(array $repositoryRecords)
+  protected function hydrateLocalRelations(array &$repositoryRecords)
   {
     /**
      * Search through the repository records in an attempt to find relation definition.
@@ -164,12 +181,10 @@ class flavaFlatDataService
         }
       }
     }
-
-    return $repositoryRecords;
   }
 
   /**
-   * Hydrates relations based on set foreign_alias parameters.
+   * Hydrates relations based on set foreign alias properties.
    * 
    * Searches all repositories for:
    *   - A relation definition set to the current repository's name. 
@@ -180,30 +195,40 @@ class flavaFlatDataService
    * @access protected
    * @return void
    */
-  protected function hydrateForeignRelations(array $repositoryRecords)
+  protected function hydrateForeignRelations(array &$repositoryRecords)
   {
+    // Get a list of all repostory names in our repository path.
     foreach ($this->getRepositoryNames() as $repositoryName)
     {
+      // For each iteration, load up the repository.
       $targetRepositoryRecords = $this->loadRepository($repositoryName);
 
+      // We're only interested in searching if the repository has a relation definition.
       if ($this->hasLocalRelationDefinition($targetRepositoryRecords))
       {
+        // Iterate through each repository's record.
         foreach ($targetRepositoryRecords as $targetRepositoryRecordId => $targetRepositoryRecord)
         {
+          // Iterate through each record's property.
           foreach ($targetRepositoryRecord as $repositoryRecordProperty => $repositoryRecordPropertyValue)
           {
+            // We're only interested in proceeding if the property has a relation definition.
             if ($this->hasLocalRelationDefinition($repositoryRecordPropertyValue))
             {
+              // Does the set repository property match our current repository?
               if ($repositoryRecordPropertyValue['repository'] = $this->repositoryName)
               {
+                // Iterate through our current repository's records.
                 foreach ($repositoryRecords as $repositoryRecordId => $repositoryRecord)
                 {
+                  // Do we have any matching records in the relation definition's values property?
                   if (in_array($repositoryRecordId, $repositoryRecordPropertyValue['values']))
                   {
-                    // current repo record exists in foreign relation values
-                    // take foreign related repo and add it to current repo record as related property
-                    $repositoryRecords[$repositoryRecordId][$repositoryRecordPropertyValue['foreign_alias']][$targetRepositoryRecordId] = $this->removeRelationDefinitions($targetRepositoryRecord);
-                    //$repositoryRecords[$repositoryRecordId][$repositoryRecordPropertyValue['foreign_alias']][$targetRepositoryRecordId] = $targetRepositoryRecord;
+                    // We've got a match. Let's kill any relation definitions in the foreign relation definition.
+                    $targetRepositoryRecord = $this->removeRelationDefinitions($targetRepositoryRecord);
+
+                    // Then add it to our repository's records.
+                    $repositoryRecords[$repositoryRecordId][$repositoryRecordPropertyValue['foreign_alias']][$targetRepositoryRecordId] = $targetRepositoryRecord;
                   }
                 }
               }
@@ -211,8 +236,6 @@ class flavaFlatDataService
           }
         }
       }
-
-      return $repositoryRecords;
     }
   }
 
@@ -254,12 +277,12 @@ class flavaFlatDataService
     while (false !== ($file = readdir($handle)))
     {
       // Make sure we're only grabbing files that have the extension defined by our loader service.
-      $pattern = '/.*\.' . $this->parseService->getRepositoryExtension() . '/';
+      $pattern = '/.*\.' . $this->loader->getRepositoryExtension() . '/';
 
       if (($file !== '.' && $file !== '..') && preg_match($pattern, $file))
       {
         // We only need the repository name from here on out. We'll kill the extension here.
-        $targetRepositoryName = str_replace('.' . $this->parseService->getRepositoryExtension(), '', $file);
+        $targetRepositoryName = str_replace('.' . $this->loader->getRepositoryExtension(), '', $file);
         $repositoryNames[] = $targetRepositoryName;
       }
     }
@@ -278,7 +301,7 @@ class flavaFlatDataService
    */
   public function loadRepository($repository)
   {
-    return $this->parseService->loadRepository(
+    return $this->loader->loadRepository(
       sprintf('%s%s.%s',
         $this->repositoriesPath,
         $repository,
@@ -587,5 +610,17 @@ class flavaFlatDataService
     $this->repositoriesPath = $path;
 
     return $this;
+  }
+
+  /**
+   * getRepositoryCacheKey 
+   * 
+   * @param mixed $repositoryName 
+   * @access protected
+   * @return void
+   */
+  protected function getRepositoryCacheKey($repositoryName)
+  {
+    return 'flava_flat_data_repository_' . $repositoryName;
   }
 }

@@ -11,6 +11,7 @@
 class flavaFlatYamlDataLoader implements flavaFlatDataLoaderInterface
 {
   protected $extension = 'yml';
+  protected $useCache = true;
 
   public function loadRepository($respository)
   {

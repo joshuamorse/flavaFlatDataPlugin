@@ -2,7 +2,7 @@
 
 include dirname(__FILE__) . '/../../bootstrap/unit.php';
 
-$t = new lime_test(14, new lime_output_color());
+$t = new lime_test(11, new lime_output_color());
 
 $repositoriesPath = dirname(__FILE__) . '/../../config/data/';
 $loaderClass = 'flavaFlatPhpDataLoader';
@@ -51,3 +51,4 @@ $projects = $ffd
 
 $t->is(is_array($projects), true, 'repo returns an array');
 $t->is(array_key_exists('work_items', $projects), true, 'relational work_items key exists');
+//$t->is(in_array('repository', $ffd['work_items']), null, 'relation definition does not exist');

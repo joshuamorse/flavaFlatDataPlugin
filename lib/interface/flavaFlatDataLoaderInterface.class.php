@@ -27,7 +27,7 @@ interface flavaFlatDataLoaderInterface
    * Example: if you were planning on parsing YAML files, you'd return 'yml' here.
    * 
    * @access public
-   * @return void
+   * @return string
    */
   function getRepositoryExtension();
 }

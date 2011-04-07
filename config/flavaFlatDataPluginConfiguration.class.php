@@ -38,14 +38,15 @@ class flavaFlatDataPluginConfiguration extends sfPluginConfiguration
         'flavaFlatYamlDataLoader'
       );
 
-      $class = 'flavaFlatPhpDataLoader'; // temp
+      $loaderClass = 'flavaFlatPhpDataLoader'; // temp
+      $loader = new $loaderClass();
 
-      $hydrateForeignRelations = true;
-      $hydrateLocalRelations = true;
+      $cacheClass = 'sfFileCache';
+      $cacheDriver = new $cacheClass(array('cache_dir' => sfConfig::get('sf_cache_dir')));
+
       $repositoriesPath = dirname(__FILE__) . '/data/';
 
-      $parseService = new $class();
-      $this->instance = new flavaFlatDataService($repositoriesPath, $parseService, $hydrateLocalRelations, $hydrateForeignRelations);
+      $this->instance = new flavaFlatDataService($repositoriesPath, $loader, $cacheDriver);
     }
 
     return $this->instance;
