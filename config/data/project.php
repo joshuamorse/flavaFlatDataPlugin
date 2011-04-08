@@ -12,6 +12,8 @@ $data = array(
     'work_item' => array(
       'repository' => 'work_item',
       'foreign_alias' => 'project',
+      'type' => 'one',
+      'foreign_type' => 'one',
       'values' => array(
         'work_item_a',
       ),

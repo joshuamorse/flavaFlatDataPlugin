@@ -10,7 +10,7 @@
  *
  * @package flavaFlatDataPlugin
  * @version $id$
- * @author Joshua Morse <joshua.morse@iostudio.com> 
+ * @author Joshua Morse <dashvibe@gmail.com> 
  */
 class flavaFlatDataService
 {
@@ -81,24 +81,27 @@ class flavaFlatDataService
   public function getRepository($repositoryName)
   {
     $this->resetRepositoryAndRecord();
-    $this->repositoryName = $repository;
-    $this->repositoryRecords = $this->loadRepository($repository);
+    $this->repositoryName = $repositoryName;
+    $this->repositoryRecords = $this->loadRepository($repositoryName);
+
+    $cacheEntryFound = false;
 
     // Has a cache driver been specified?
-    if ($this->cacheDriver)
+    if (is_object($this->cacheDriver))
     {
       // Can we find this repository's records in the cache?
       if ($repositoryRecords = $this->cacheDriver->get($this->getRepositoryCacheKey($repositoryName)))
       {
         // We found it! Unserialize it and set it.
         $this->repositoryRecords = unserialize($repositoryRecords);
+        $cacheEntryFound &= true;
       }
-      else
-      {
-        // We couldn't find it. We'll fetch it and then cache it.
-        $this->fetchRepository($repositoryName);
-        $this->cacheDriver->set($this->getRepositoryCacheKey($repositoryName), serialize($this->repositoryRecords));
-      }
+    }
+
+    if (!is_object($this->cacheDriver) || !$cacheEntryFound)
+    {
+      $this->fetchRepository($repositoryName);
+      $this->cacheDriver->set($this->getRepositoryCacheKey($repositoryName), serialize($this->repositoryRecords));
     }
 
     return $this;
@@ -113,6 +116,7 @@ class flavaFlatDataService
 
     $this->hydrateLocalRelations($this->repositoryRecords);    
     $this->hydrateForeignRelations($this->repositoryRecords);
+    $this->stageHydratedRelations($this->repositoryRecords);
   }
 
   /**
@@ -127,6 +131,44 @@ class flavaFlatDataService
     unset($this->filteredRepositoryRecords);
     unset($this->repositoryName);
     unset($this->record);
+  }
+
+  /**
+   * Stages one-to-one relations in a hydrated repository records array.
+   * More specifically, will convert something like this:
+   * user:
+   *   tester: 
+   *     name: 'tester' 
+   * 
+   * To this: 
+   * user:
+   *   name: 'tester' 
+   * 
+   * @todo this needs to only apply to singular relations; right now it will target ANY relations with one count, which doesn't make sense!
+   * 
+   * @param array $repositoryRecords 
+   * @access protected
+   * @return void
+   */
+  protected function stageHydratedRelations(array &$repositoryRecords)
+  {
+    foreach ($repositoryRecords as $repositoryRecordId => $repositoryRecordProperty)
+    {
+      if (isset($repositoryRecordProperty['_relation_properties']))
+      {
+        foreach ($repositoryRecordProperty['_relation_properties'] as $relationPropertyId => $relationProperty)
+        {
+          // Only proceed is the relationship is an x-to-one.
+          if ($relationProperty['type'] == 'one')
+          {
+            if (count($repositoryRecordProperty[$relationProperty['property']]) === 1)
+            {
+              $repositoryRecords[$repositoryRecordId][$relationProperty['property']] = reset($repositoryRecords[$repositoryRecordId][$relationProperty['property']]);
+            }
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -174,6 +216,14 @@ class flavaFlatDataService
               // Is the current repository record one our target values?
               if (in_array($targetRepositoryRecord, $targetValues))
               {
+                // Add the relation data to the _relation_properties property so we have a record of what we've auto-filled for the user.
+                $repositoryRecords[$repositoryRecord]['_relation_properties'][] = array(
+                  'property' => $repositoryRecordProperty, 
+                  'type' => $repositoryRecordPropertyValue['type'], 
+                  'source' => 'local', 
+                );
+
+                // Auto-fill the relation.
                 $repositoryRecords[$repositoryRecord][$repositoryRecordProperty][$targetRepositoryRecord] = $targetRepositoryRecordProperties;
               }
             }
@@ -224,6 +274,13 @@ class flavaFlatDataService
                   // Do we have any matching records in the relation definition's values property?
                   if (in_array($repositoryRecordId, $repositoryRecordPropertyValue['values']))
                   {
+                    // Add the relation data to the _relation_properties property so we have a record of what we've auto-filled for the user.
+                    $repositoryRecords[$repositoryRecordId]['_relation_properties'][] = array(
+                      'property' => $repositoryRecordPropertyValue['foreign_alias'],
+                      'type' => $repositoryRecordPropertyValue['foreign_type'],
+                      'source' => 'foreign',
+                    );
+
                     // We've got a match. Let's kill any relation definitions in the foreign relation definition.
                     $targetRepositoryRecord = $this->removeRelationDefinitions($targetRepositoryRecord);
 
@@ -237,6 +294,7 @@ class flavaFlatDataService
         }
       }
     }
+    //$tgt = $repositoryRecords[$repositoryRecordId][$repositoryRecordPropertyValue['foreign_alias']];
   }
 
   /**
@@ -449,7 +507,7 @@ class flavaFlatDataService
    */
   public function filter($leftValue, $operator, $rightValue)
   {
-    if ($this->record !== null)
+    if (isset($this->record))
     {
       throw new Exception('Cannot filter a repository from which a record is already fetched!');
     }
