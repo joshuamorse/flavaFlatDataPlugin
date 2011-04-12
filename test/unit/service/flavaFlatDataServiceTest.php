@@ -4,7 +4,7 @@ include dirname(__FILE__) . '/../../bootstrap/unit.php';
 
 $t = new lime_test(11, new lime_output_color());
 
-$repositoriesPath = dirname(__FILE__) . '/../../config/data/';
+$repositoriesPath = dirname(__FILE__) . '/../../../config/data/';
 $loaderClass = 'flavaFlatPhpDataLoader';
 $loaderService = new $loaderClass();
 

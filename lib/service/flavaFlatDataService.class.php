@@ -18,7 +18,7 @@ class flavaFlatDataService
     $cacheDriver, // placeholder for a cache driver,
     $filter, // filter definition for filtering repository records.
     $filteredRelatedRepositoryRecords, // related repository with filtered records defined by current property.
-    $filteredRepositoryRecords, // current repository with filtered records.
+    $filteredRepositoryRecords, // current repository records filtered via the filter() function.
     $loader, // placeholder for an optionally-supplied parse service.
     $property, // current property.
     $record, // current record.
@@ -98,15 +98,28 @@ class flavaFlatDataService
       }
     }
 
-    if (!is_object($this->cacheDriver) || !$cacheEntryFound)
+    // If a cache entry can't be found, for any reason, we'll fetch the repository records here.
+    if (!$cacheEntryFound)
     {
       $this->fetchRepository($repositoryName);
-      $this->cacheDriver->set($this->getRepositoryCacheKey($repositoryName), serialize($this->repositoryRecords));
+
+      // If a cache driver is defined, set the repository information.
+      if (is_object($this->cacheDriver))
+      {
+        $this->cacheDriver->set($this->getRepositoryCacheKey($repositoryName), serialize($this->repositoryRecords));
+      }
     }
 
     return $this;
   }
 
+  /**
+   * Sets and stages a repository.
+   * 
+   * @param mixed $repositoryName
+   * @access protected
+   * @return void
+   */
   protected function fetchRepository($repositoryName)
   {
     $this->resetRepositoryAndRecord();
@@ -360,11 +373,8 @@ class flavaFlatDataService
   public function loadRepository($repository)
   {
     return $this->loader->loadRepository(
-      sprintf('%s%s.%s',
-        $this->repositoriesPath,
-        $repository,
-        $this->repositoryExtension
-    ));
+      $this->repositoriesPath . $repository . '.' . $this->repositoryExtension
+    );
   }
   
   /**
@@ -621,8 +631,8 @@ class flavaFlatDataService
    * Returns data based on order of prescedence: 
    *   - property 
    *   - record 
-   *   - filtered repository
-   *   - repository 
+   *   - filtered repository records
+   *   - repository records
    * 
    * @static
    * @access public
@@ -653,6 +663,7 @@ class flavaFlatDataService
 
   /**
    * Verifies and sets a repository path.
+   * Throws an exception if the suplied path can't be found. 
    * 
    * @param mixed $path 
    * @access public
@@ -671,7 +682,7 @@ class flavaFlatDataService
   }
 
   /**
-   * getRepositoryCacheKey 
+   * Generates a cache key for the current repository.
    * 
    * @param mixed $repositoryName 
    * @access protected
