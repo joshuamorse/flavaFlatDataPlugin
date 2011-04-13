@@ -1,7 +1,7 @@
 <?php
 
 /**
- * flavaFlatDataParseInterface 
+ * flavaFlatDataLoaderInterface 
  * 
  * @package 
  * @version $id$
@@ -10,7 +10,7 @@
 interface flavaFlatDataLoaderInterface
 {
   /**
-   * Defines how the parse service should parse a repository, once found.
+   * Defines how the loader should parse a repository, once found.
    * Example: if you're wanting to parse a YAML file via sfYaml, your function might look something like this:
    *
    *   return sfYaml::load($respository);

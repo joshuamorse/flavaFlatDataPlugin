@@ -41,8 +41,8 @@ class flavaFlatDataPluginConfiguration extends sfPluginConfiguration
       $loaderClass = 'flavaFlatPhpDataLoader'; // temp
       $loader = new $loaderClass();
 
-      $cacheClass = 'sfFileCache';
-      $cacheDriver = new $cacheClass(array('cache_dir' => sfConfig::get('sf_cache_dir')));
+      $cacheClass = 'flavaFlatSfFileCache';
+      $cacheDriver = new $cacheClass(sfConfig::get('sf_cache_dir'));
 
       $repositoriesPath = dirname(__FILE__) . '/data/';
 

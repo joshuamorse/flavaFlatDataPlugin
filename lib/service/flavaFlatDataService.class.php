@@ -43,11 +43,12 @@ class flavaFlatDataService
    * __construct 
    * 
    * @param mixed $repositoryPath 
-   * @param flavaFlatDataParseInterface $loader 
+   * @param flavaFlatDataLoaderInterface $loader 
+   * @param flavaFlatDataCacheInterface $cacheDriver 
    * @access public
    * @return void
    */
-  public function __construct($repositoriesPath, flavaFlatDataLoaderInterface $loader, $cacheDriver = null)
+  public function __construct($repositoriesPath, flavaFlatDataLoaderInterface $loader, flavaFlatDataCacheInterface $cacheDriver = null)
   {
     $this->filter = array(
       'leftValue' => null,
@@ -90,7 +91,7 @@ class flavaFlatDataService
     if (is_object($this->cacheDriver))
     {
       // Can we find this repository's records in the cache?
-      if ($repositoryRecords = $this->cacheDriver->get($this->getRepositoryCacheKey($repositoryName)))
+      if ($repositoryRecords = $this->cacheDriver->getEntry($this->getRepositoryCacheKey($repositoryName)))
       {
         // We found it! Unserialize it and set it.
         $this->repositoryRecords = unserialize($repositoryRecords);
@@ -106,7 +107,7 @@ class flavaFlatDataService
       // If a cache driver is defined, set the repository information.
       if (is_object($this->cacheDriver))
       {
-        $this->cacheDriver->set($this->getRepositoryCacheKey($repositoryName), serialize($this->repositoryRecords));
+        $this->cacheDriver->setEntry($this->getRepositoryCacheKey($repositoryName), serialize($this->repositoryRecords));
       }
     }
 
@@ -253,7 +254,7 @@ class flavaFlatDataService
    *   - A relation definition set to the current repository's name. 
    *   - A foreign_alias definition within the relation definition. 
    * 
-   * If found, the function will add the related data to the current repository.
+   * If found, the hydrateForeignRelations will add the related data to the current repository.
    * 
    * @access protected
    * @return void
@@ -596,29 +597,21 @@ class flavaFlatDataService
     switch ($operator)
     {
       case self::GREATER_THAN:
-        $statement = $leftValue > $rightValue;
-        break;
+        return $leftValue > $rightValue;
       case self::GREATER_THAN_EQUAL:
-        $statement = $leftValue >= $rightValue;
-        break;
+        return $leftValue >= $rightValue;
       case self::LESS_THAN:
-        $statement = $leftValue < $rightValue;
-        break;
+        return $leftValue < $rightValue;
       case self::LESS_THAN_EQUAL:
-        $statement = $leftValue <= $rightValue;
-        break;
+        return $leftValue <= $rightValue;
       case self::NOT_EQUAL:
-        $statement = $leftValue != $rightValue;
-        break;
+        return $leftValue != $rightValue;
       case self::EQUAL:
-        $statement = $leftValue == $rightValue;
-        break;
+        return $leftValue == $rightValue;
       case self::NOT_IDENTICAL:
-        $statement = $leftValue !== $rightValue;
-        break;
+        return $leftValue !== $rightValue;
       case self::IDENTICAL:
-        $statement = $leftValue === $rightValue;
-        break;
+        return $leftValue === $rightValue;
       default:
         throw new Exception('operator does not exist');
     }
