@@ -3,6 +3,13 @@ flavaFlatDataPlugin
 A solution for defining and querying for read-only, flat-file data. Can read from PHP 
 and YAML sources and is expandable from there.
 
+Relation Options
+----------------
+- repository: specifies the target repository to which the given entry is related.
+- type: if set to 'one', will stage a single relation by surpressing the record's key. defaults to 'many'.
+- values: denotes the related records
+- foreign_alias: links and defines how this relation is referred to in the target repository.
+
 
 General Usage
 -------------

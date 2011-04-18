@@ -158,8 +158,6 @@ class flavaFlatDataService
    * user:
    *   name: 'tester' 
    * 
-   * @todo this needs to only apply to singular relations; right now it will target ANY relations with one count, which doesn't make sense!
-   * 
    * @param array $repositoryRecords 
    * @access protected
    * @return void
@@ -172,12 +170,18 @@ class flavaFlatDataService
       {
         foreach ($repositoryRecordProperty['_relation_properties'] as $relationPropertyId => $relationProperty)
         {
-          // Only proceed is the relationship is an x-to-one.
-          if ($relationProperty['type'] == 'one')
+          // Has a type been set?
+          if (isset($relationProperty['type']))
           {
-            if (count($repositoryRecordProperty[$relationProperty['property']]) === 1)
+            // Only proceed is the relationship is an x-to-one.
+            if ($relationProperty['type'] == 'one')
             {
-              $repositoryRecords[$repositoryRecordId][$relationProperty['property']] = reset($repositoryRecords[$repositoryRecordId][$relationProperty['property']]);
+              // Ensure that we've only a single related record.
+              if (count($repositoryRecordProperty[$relationProperty['property']]) === 1)
+              {
+                // We'll get rid of the key and hydrate the data here.
+                $repositoryRecords[$repositoryRecordId][$relationProperty['property']] = reset($repositoryRecords[$repositoryRecordId][$relationProperty['property']]);
+              }
             }
           }
         }
@@ -232,10 +236,19 @@ class flavaFlatDataService
               {
                 // Add the relation data to the _relation_properties property so we have a record of what we've auto-filled for the user.
                 $repositoryRecords[$repositoryRecord]['_relation_properties'][] = array(
-                  'property' => $repositoryRecordProperty, 
-                  'type' => $repositoryRecordPropertyValue['type'], 
-                  'source' => 'local', 
+                  'property' => $repositoryRecordProperty,
+                  'source' => 'local',
                 );
+
+                // Only set the type if it's been defined.
+                if (isset($repositoryRecordPropertyValue['type']))
+                {
+                  $repositoryRecords[$repositoryRecord]['type'] = $repositoryRecordPropertyValue['type'];
+                }
+                else
+                {
+                  $repositoryRecords[$repositoryRecord]['type'] = 'many';
+                }
 
                 // Auto-fill the relation.
                 $repositoryRecords[$repositoryRecord][$repositoryRecordProperty][$targetRepositoryRecord] = $targetRepositoryRecordProperties;
@@ -279,27 +292,39 @@ class flavaFlatDataService
             // We're only interested in proceeding if the property has a relation definition.
             if ($this->hasLocalRelationDefinition($repositoryRecordPropertyValue))
             {
-              // Does the set repository property match our current repository?
-              if ($repositoryRecordPropertyValue['repository'] = $this->repositoryName)
+              // Is a foreign alias set?
+              if (isset($repositoryRecordPropertyValue['foreign_alias']))
               {
-                // Iterate through our current repository's records.
-                foreach ($repositoryRecords as $repositoryRecordId => $repositoryRecord)
+                // Does the set repository property match our current repository?
+                if ($repositoryRecordPropertyValue['repository'] = $this->repositoryName)
                 {
-                  // Do we have any matching records in the relation definition's values property?
-                  if (in_array($repositoryRecordId, $repositoryRecordPropertyValue['values']))
+                  // Iterate through our current repository's records.
+                  foreach ($repositoryRecords as $repositoryRecordId => $repositoryRecord)
                   {
-                    // Add the relation data to the _relation_properties property so we have a record of what we've auto-filled for the user.
-                    $repositoryRecords[$repositoryRecordId]['_relation_properties'][] = array(
-                      'property' => $repositoryRecordPropertyValue['foreign_alias'],
-                      'type' => $repositoryRecordPropertyValue['foreign_type'],
-                      'source' => 'foreign',
-                    );
+                    // Do we have any matching records in the relation definition's values property?
+                    if (in_array($repositoryRecordId, $repositoryRecordPropertyValue['values']))
+                    {
+                      // Add the relation data to the _relation_properties property so we have a record of what we've auto-filled for the user.
+                      $repositoryRecords[$repositoryRecordId]['_relation_properties'][] = array(
+                        'source' => 'foreign',
+                      );
 
-                    // We've got a match. Let's kill any relation definitions in the foreign relation definition.
-                    $targetRepositoryRecord = $this->removeRelationDefinitions($targetRepositoryRecord);
+                      if (isset($repositoryRecordPropertyValue['foreign_alias']))
+                      {
+                        $repositoryRecords[$repositoryRecordId]['property'] = $repositoryRecordPropertyValue['foreign_alias'];
+                      }
 
-                    // Then add it to our repository's records.
-                    $repositoryRecords[$repositoryRecordId][$repositoryRecordPropertyValue['foreign_alias']][$targetRepositoryRecordId] = $targetRepositoryRecord;
+                      //if (isset($repositoryRecordPropertyValue['foreign_type']))
+                      //{
+                        //$repositoryRecords[$repositoryRecordId]['type'] = $repositoryRecordPropertyValue['foreign_type'];
+                      //}
+
+                      // We've got a match. Let's kill any relation definitions in the foreign relation definition.
+                      $targetRepositoryRecord = $this->removeRelationDefinitions($targetRepositoryRecord);
+
+                      // Then add it to our repository's records.
+                      $repositoryRecords[$repositoryRecordId][$repositoryRecordPropertyValue['foreign_alias']][$targetRepositoryRecordId] = $targetRepositoryRecord;
+                    }
                   }
                 }
               }
